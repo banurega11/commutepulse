@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CommutePulse — Smart Commute Advisor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B1C2C;
+    --surface:#122A3E;
+    --surface-raised:#1B3A54;
+    --hairline:#24425E;
+    --amber:#F2A33C;
+    --green:#4FA87A;
+    --red:#E4572E;
+    --text:#EDEFF2;
+    --muted:#8FA3B8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 60px;}
+
+  /* Header - departure board ticker */
+  header{
+    display:flex;justify-content:space-between;align-items:baseline;
+    border-bottom:2px solid var(--amber);
+    padding-bottom:16px;margin-bottom:28px;flex-wrap:wrap;gap:10px;
+  }
+  h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    letter-spacing:0.04em;
+    font-size:28px;
+    margin:0;
+    text-transform:uppercase;
+  }
+  h1 span{color:var(--amber);}
+  #meta{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    color:var(--muted);
+    text-align:right;
+  }
+  #meta b{color:var(--green);}
+
+  .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:22px;}
+  @media (max-width:860px){.grid{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    padding:20px 22px;
+  }
+  .card h2{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    font-size:14px;
+    color:var(--amber);
+    margin:0 0 16px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .card h2::before{content:"";width:8px;height:8px;background:var(--amber);display:inline-block;border-radius:1px;}
+
+  /* Heatmap */
+  #heatmap-scroll{overflow-x:auto;}
+  table.heatmap{border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px;width:100%;}
+  table.heatmap th{color:var(--muted);font-weight:500;padding:4px 3px;text-align:center;}
+  table.heatmap td.rowlabel{color:var(--text);font-family:'Inter';font-size:12px;padding:4px 8px 4px 0;white-space:nowrap;text-align:right;}
+  table.heatmap td.cell{width:26px;height:22px;text-align:center;color:#0B1C2C;font-weight:600;border-radius:2px;}
+  .legend{display:flex;gap:14px;margin-top:12px;font-size:11px;color:var(--muted);align-items:center;flex-wrap:wrap;}
+  .swatch{width:12px;height:12px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:middle;}
+
+  /* Form */
+  label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.04em;}
+  select{
+    width:100%;padding:9px 10px;background:var(--surface-raised);color:var(--text);
+    border:1px solid var(--hairline);border-radius:4px;font-family:'Inter';font-size:14px;
+  }
+  button{
+    margin-top:18px;width:100%;padding:11px;background:var(--amber);color:#0B1C2C;
+    border:none;border-radius:4px;font-family:'Oswald';font-weight:600;letter-spacing:.04em;
+    text-transform:uppercase;font-size:13px;cursor:pointer;
+  }
+  button:hover{filter:brightness(1.08);}
+
+  /* Split-flap risk card */
+  #riskcard{margin-top:20px;border:1px solid var(--hairline);border-radius:6px;overflow:hidden;background:#0E2334;display:none;}
+  #riskcard.show{display:block;}
+  .flap-row{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--hairline);}
+  .flap-row:last-child{border-bottom:none;}
+  .flap-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .flap-value{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;}
+  #risk-score-big{
+    font-family:'IBM Plex Mono',monospace;font-size:44px;font-weight:600;
+    padding:18px 16px 4px;text-align:center;
+  }
+  #risk-level-big{text-align:center;padding-bottom:14px;font-family:'Oswald';text-transform:uppercase;letter-spacing:.08em;font-size:13px;}
+  #recommendation{padding:14px 16px;font-size:13.5px;line-height:1.5;color:var(--text);background:var(--surface-raised);}
+
+  /* Anomalies table */
+  table.anom{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.anom th{text-align:left;color:var(--muted);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--hairline);text-transform:uppercase;font-size:10.5px;letter-spacing:.04em;}
+  table.anom td{padding:7px 8px;border-bottom:1px solid var(--hairline);font-family:'IBM Plex Mono',monospace;font-size:12px;}
+  table.anom tr:hover{background:var(--surface-raised);}
+  .tag{padding:2px 6px;border-radius:3px;font-size:10.5px;font-family:'Inter';}
+  .tag.rain{background:#1E4A6B;color:#9FD3F5;}
+  .tag.fog{background:#3A3A50;color:#C7C7E0;}
+  .tag.clear{background:#1E3A2A;color:#8FD9AF;}
+
+  .foot{margin-top:26px;font-size:11px;color:var(--muted);text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Commute<span>Pulse</span></h1>
+    <div id="meta">loading dataset…</div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Delay Heatmap — Avg Minutes by Route &amp; Hour</h2>
+      <div id="heatmap-scroll"><table class="heatmap" id="heatmap"></table></div>
+      <div class="legend">
+        <span><span class="swatch" style="background:#4FA87A"></span>On time</span>
+        <span><span class="swatch" style="background:#F2A33C"></span>Moderate</span>
+        <span><span class="swatch" style="background:#E4572E"></span>Heavy delay</span>
+      </div>
+
+      <h2 style="margin-top:26px;">Recent Unusual Delays (Anomaly Detection)</h2>
+      <div style="max-height:260px;overflow-y:auto;">
+        <table class="anom" id="anomtable">
+          <thead><tr><th>Route</th><th>Hour</th><th>Day</th><th>Weather</th><th>Delay (min)</th><th>Z-score</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Plan Your Commute</h2>
+        <label for="route">Route</label>
+        <select id="route"></select>
+        <label for="hour">Departure hour</label>
+        <select id="hour"></select>
+        <label for="weather">Weather</label>
+        <select id="weather">
+          <option value="clear">Clear</option>
+          <option value="rain">Rain</option>
+          <option value="fog">Fog</option>
+        </select>
+        <button onclick="getRisk()">Check risk</button>
+
+        <div id="riskcard">
+          <div id="risk-score-big">--</div>
+          <div id="risk-level-big">--</div>
+          <div id="recommendation">Pick a route and hour above.</div>
+          <div class="flap-row"><span class="flap-label">Avg delay</span><span class="flap-value" id="f-avg">--</span></div>
+          <div class="flap-row"><span class="flap-label">P90 delay</span><span class="flap-value" id="f-p90">--</span></div>
+          <div class="flap-row"><span class="flap-label">Incident rate</span><span class="flap-value" id="f-inc">--</span></div>
+          <div class="flap-row" id="alt-row" style="display:none;"><span class="flap-label">Better option</span><span class="flap-value" id="f-alt">--</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">CommutePulse — decision-support prototype · data pipeline: pandas / cudf.pandas · serving via Flask + Cloud Run</div>
+</div>
+
+<script>
+let ROUTES = [];
+let HEATMAP = [];
+
+async function boot(){
+  const meta = await (await fetch('/api/meta')).json();
+  document.getElementById('meta').innerHTML =
+    `${meta.rows.toLocaleString()} sensor records · ${meta.routes} routes · GPU accel: <b>${meta.gpu_accelerated ? 'ON (cudf.pandas)' : 'off (CPU/pandas)'}</b>`;
+
+  ROUTES = await (await fetch('/api/routes')).json();
+  const routeSel = document.getElementById('route');
+  ROUTES.forEach(r => {
+    const o = document.createElement('option');
+    o.value = r.route_id; o.textContent = `${r.route_id} — ${r.route_name}`;
+    routeSel.appendChild(o);
+  });
+
+  const hourSel = document.getElementById('hour');
+  for(let h=0; h<24; h++){
+    const o = document.createElement('option');
+    o.value = h; o.textContent = String(h).padStart(2,'0') + ':00';
+    hourSel.appendChild(o);
+  }
+  hourSel.value = 8;
+
+  HEATMAP = await (await fetch('/api/heatmap')).json();
+  drawHeatmap();
+  drawAnomalies();
+}
+
+function delayColor(v){
+  // green -> amber -> red scale
+  if(v <= 3) return '#4FA87A';
+  if(v <= 8) return '#8FBF6B';
+  if(v <= 14) return '#F2A33C';
+  if(v <= 20) return '#E88A3C';
+  return '#E4572E';
+}
+
+function drawHeatmap(){
+  const table = document.getElementById('heatmap');
+  const hours = [...Array(24).keys()];
+  let head = '<tr><th></th>' + hours.map(h=>`<th>${h}</th>`).join('') + '</tr>';
+  let rows = '';
+  ROUTES.forEach(r=>{
+    rows += `<tr><td class="rowlabel">${r.route_id}</td>`;
+    hours.forEach(h=>{
+      const rec = HEATMAP.find(x => x.route_id===r.route_id && x.hour===h);
+      const v = rec ? rec.avg_delay : 0;
+      rows += `<td class="cell" style="background:${delayColor(v)}" title="${r.route_id} @ ${h}:00 — avg ${v}min">${v.toFixed ? v.toFixed(0) : v}</td>`;
+    });
+    rows += '</tr>';
+  });
+  table.innerHTML = head + rows;
+}
+
+async function drawAnomalies(){
+  const data = await (await fetch('/api/anomalies')).json();
+  const tbody = document.querySelector('#anomtable tbody');
+  tbody.innerHTML = data.slice(0,25).map(a => `
+    <tr>
+      <td>${a.route_id}</td>
+      <td>${a.hour}:00</td>
+      <td>${a.day_of_week}</td>
+      <td><span class="tag ${a.weather}">${a.weather}</span></td>
+      <td>${a.delay_minutes}</td>
+      <td>${a.z}</td>
+    </tr>`).join('');
+}
+
+async function getRisk(){
+  const route_id = document.getElementById('route').value;
+  const hour = document.getElementById('hour').value;
+  const weather = document.getElementById('weather').value;
+  const res = await fetch(`/api/risk?route_id=${route_id}&hour=${hour}&weather=${weather}`);
+  const d = await res.json();
+  if(d.error){ alert(d.error); return; }
+
+  const card = document.getElementById('riskcard');
+  card.classList.add('show');
+  const big = document.getElementById('risk-score-big');
+  big.textContent = d.risk_score;
+  big.style.color = d.risk_level === 'Low' ? '#4FA87A' : d.risk_level === 'Moderate' ? '#F2A33C' : '#E4572E';
+  document.getElementById('risk-level-big').textContent = d.risk_level + ' RISK';
+  document.getElementById('recommendation').textContent = d.recommendation;
+  document.getElementById('f-avg').textContent = d.avg_delay_minutes + ' min';
+  document.getElementById('f-p90').textContent = d.p90_delay_minutes + ' min';
+  document.getElementById('f-inc').textContent = (d.incident_rate*100).toFixed(1) + '%';
+  const altRow = document.getElementById('alt-row');
+  if(d.alternate_route_id){
+    altRow.style.display='flex';
+    document.getElementById('f-alt').textContent = d.alternate_route_id;
+  } else {
+    altRow.style.display='none';
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

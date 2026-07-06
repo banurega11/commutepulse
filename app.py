@@ -17,10 +17,17 @@ import os
 from flask import Flask, jsonify, request, send_from_directory
 
 import analysis as an
+import data_gen
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 
 DATA_PATH = os.environ.get("DATA_PATH", "commute_data.csv")
+
+if not os.path.exists(DATA_PATH):
+    # Safety net: if the CSV wasn't baked into the image (or was deleted),
+    # generate it on first boot rather than crashing the worker.
+    data_gen.generate(200_000).to_csv(DATA_PATH, index=False)
+
 DF = an.load_data(DATA_PATH)
 HEATMAP = an.route_hour_stats(DF)
 ANOMALIES = an.detect_anomalies(DF).head(50)

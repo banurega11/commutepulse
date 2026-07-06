@@ -7,6 +7,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Generate the dataset at build time so it's baked into the image
+RUN python data_gen.py --rows 200000 --out commute_data.csv
+
 # Cloud Run injects $PORT; gunicorn binds to it
 ENV PORT=8080
 EXPOSE 8080
